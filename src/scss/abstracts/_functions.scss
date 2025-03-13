@@ -1,0 +1,55 @@
+// --------------------------------------------------------------------
+// Obtener Tamaño de Fuente ------------------------------------------
+// Se usa en _mixins.scss [@mixin font-size] -------------------------
+// --------------------------------------------------------------------
+@function get-font-size($size, $elem) {
+	@return nth(map-get(map-get($font__scale, $elem), $size), 1);
+}
+
+// --------------------------------------------------------------------
+// Obtener Altura de Línea -------------------------------------------
+// Se usa en _mixins.scss [@mixin font-size] -------------------------
+// --------------------------------------------------------------------
+@function get-line-height($size, $elem) {
+	@return nth(map-get(map-get($font__scale, $elem), $size), 2);
+}
+
+// --------------------------------------------------------------------
+// Obtener Kerning (Espaciado entre letras) --------------------------
+// Se usa en _mixins.scss [@mixin font-size] -------------------------
+// --------------------------------------------------------------------
+@function get-kerning($size, $elem) {
+	@return nth(map-get(map-get($font__scale, $elem), $size), 3);
+}
+
+// --------------------------------------------------------------------
+// Obtener Familia de Fuente -----------------------------------------
+// Se usa en _mixins.scss [@mixin font-family] -----------------------
+// --------------------------------------------------------------------
+@function get-font-family($elem) {
+	@return map-get($font__family, $elem);
+}
+
+// --------------------------------------------------------------------
+// Obtener Peso de Fuente --------------------------------------------
+// Se usa en _mixins.scss [@mixin font-weight] -----------------------
+// --------------------------------------------------------------------
+@function get-font-weight($elem) {
+	@return map-get($font__weight, $elem);
+}
+
+// --------------------------------------------------------------------
+// Obtener Padding de Elementos del Área de Contenido ----------------
+// Se usa en _mixins.scss [@mixin font-size] -------------------------
+// --------------------------------------------------------------------
+@function get-content-padding($elem) {
+	@return map-get($content__padding, $elem);
+}
+
+// --------------------------------------------------------------------
+// Obtener Colores ---------------------------------------------------
+// Uso: color(typography, 1) -----------------------------------------
+// --------------------------------------------------------------------
+@function color($elem, $variant) {
+	@return map-get(map-get($color, $elem), $variant);
+}

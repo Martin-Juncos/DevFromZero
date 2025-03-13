@@ -1,0 +1,558 @@
+@charset "UTF-8";
+
+///
+/// Crea una lista de breakpoints globales
+///
+/// @example scss - Crea un breakpoint con la etiqueta `phone`
+///  $breakpoints: ('phone': 320px);
+///
+$breakpoints: (
+	"small": 480px,
+	"medium": 640px,
+	"large": 1024px,
+) !default;
+
+///
+/// Crea una lista de expresiones estáticas o tipos de medios
+///
+/// @example scss - Crea un tipo de medio (screen)
+///  $media-expressions: ('screen': 'screen');
+///
+/// @example scss - Crea una expresión estática con disyunción lógica (operador OR)
+///  $media-expressions: (
+///    'retina2x': '(-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi)'
+///  );
+///
+$media-expressions: (
+	"screen": "screen",
+	"print": "print",
+	"handheld": "handheld",
+	"landscape": "(orientation: landscape)",
+	"portrait": "(orientation: portrait)",
+	"retina2x":
+		"(-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi), (min-resolution: 2dppx)",
+	"retina3x":
+		"(-webkit-min-device-pixel-ratio: 3), (min-resolution: 350dpi), (min-resolution: 3dppx)",
+) !default;
+
+///
+/// Define un número que se suma o resta de cada unidad al declarar breakpoints con intervalos exclusivos
+///
+/// @example scss - El intervalo para píxeles es `1` por defecto
+///  @include media('>128px') {}
+///
+///  /* Genera: */
+///  @media (min-width: 129px) {}
+///
+/// @example scss - El intervalo para ems es `0.01` por defecto
+///  @include media('>20em') {}
+///
+///  /* Genera: */
+///  @media (min-width: 20.01em) {}
+///
+/// @example scss - El intervalo para rems es `0.1` por defecto, para usarse con `font-size: 62.5%;`
+///  @include media('>2.0rem') {}
+///
+///  /* Genera: */
+///  @media (min-width: 2.1rem) {}
+///
+$unit-intervals: (
+	"px": 1,
+	"em": 0.01,
+	"rem": 0.1,
+	"": 0,
+) !default;
+
+///
+/// Define si el soporte para media queries está disponible. Útil para crear hojas de estilo separadas
+/// para navegadores que no soportan media queries.
+///
+/// @example scss - Desactiva el soporte para media queries
+///  $im-media-support: false;
+///  @include media('>=tablet') {
+///    .foo {
+///      color: tomato;
+///    }
+///  }
+///
+///  /* Genera: */
+///  .foo {
+///    color: tomato;
+///  }
+///
+$im-media-support: true !default;
+
+///
+/// Selecciona qué breakpoint emular cuando el soporte para media queries está desactivado. Las media queries que comienzan o
+/// interceptan el breakpoint se mostrarán, cualquier otra será ignorada.
+///
+/// @example scss - Esta media query se mostrará porque intercepta el breakpoint estático
+///  $im-media-support: false;
+///  $im-no-media-breakpoint: 'desktop';
+///  @include media('>=tablet') {
+///    .foo {
+///      color: tomato;
+///    }
+///  }
+///
+///  /* Genera: */
+///  .foo {
+///    color: tomato;
+///  }
+///
+/// @example scss - Esta media query NO se mostrará porque no intercepta el breakpoint desktop
+///  $im-media-support: false;
+///  $im-no-media-breakpoint: 'tablet';
+///  @include media('>=desktop') {
+///    .foo {
+///      color: tomato;
+///    }
+///  }
+///
+///  /* No genera salida */
+///
+$im-no-media-breakpoint: "desktop" !default;
+
+///
+/// Selecciona qué expresiones de medios están permitidas en una expresión para que se usen cuando las media queries
+/// no están soportadas.
+///
+/// @example scss - Esta media query se mostrará porque intercepta el breakpoint estático y contiene solo expresiones de medios aceptadas
+///  $im-media-support: false;
+///  $im-no-media-breakpoint: 'desktop';
+///  $im-no-media-expressions: ('screen');
+///  @include media('>=tablet', 'screen') {
+///    .foo {
+///      color: tomato;
+///    }
+///  }
+///
+///   /* Genera: */
+///   .foo {
+///     color: tomato;
+///   }
+///
+/// @example scss - Esta media query NO se mostrará porque intercepta el breakpoint estático pero contiene una expresión de medios no aceptada
+///  $im-media-support: false;
+///  $im-no-media-breakpoint: 'desktop';
+///  $im-no-media-expressions: ('screen');
+///  @include media('>=tablet', 'retina2x') {
+///    .foo {
+///      color: tomato;
+///    }
+///  }
+///
+///  /* No genera salida */
+///
+$im-no-media-expressions: ("screen", "portrait", "landscape") !default;
+
+////
+
+///
+/// Registra un mensaje usando `@error` si está soportado,
+/// de lo contrario usa `@warn`, utilizando `feature-exists('at-error')`
+/// para detectar soporte.
+///
+/// @param {String} $message - Mensaje a registrar
+///
+@function im-log($message) {
+	@if feature-exists("at-error") {
+		@error $message;
+	} @else {
+		@warn $message;
+		$_: noop();
+	}
+
+	@return $message;
+}
+
+///
+/// Mixin wrapper para la función de registro, para que pueda usarse con una API más amigable
+/// que `@if im-log('..') {}` o `$_: im-log('..')`. Básicamente, usa la función
+/// dentro de funciones porque no es posible incluir un mixin en una función
+/// y usa el mixin en otros lugares porque es más elegante.
+///
+/// @param {String} $message - Mensaje a registrar
+///
+@mixin log($message) {
+	@if im-log($message) {
+	}
+}
+
+///
+/// Función sin `@return` llamada junto a `@warn` en Sass 3.3
+/// para provocar un error de compilación y detener el proceso.
+///
+@function noop() {
+}
+
+///
+/// Determina si una lista de condiciones es interceptada por el breakpoint estático.
+///
+/// @param {Arglist}   $conditions  - Condiciones de la media query
+///
+/// @return {Boolean} - Devuelve true si las condiciones son interceptadas por el breakpoint estático
+///
+@function im-intercepts-static-breakpoint($conditions...) {
+	$no-media-breakpoint-value: map-get($breakpoints, $im-no-media-breakpoint);
+
+	@if not $no-media-breakpoint-value {
+		@if im-log("`#{$im-no-media-breakpoint}` no es un breakpoint válido.") {
+		}
+	}
+
+	@each $condition in $conditions {
+		@if not map-has-key($media-expressions, $condition) {
+			$operator: get-expression-operator($condition);
+			$prefix: get-expression-prefix($operator);
+			$value: get-expression-value($condition, $operator);
+
+			@if ($prefix == "max" and $value <= $no-media-breakpoint-value) or
+				($prefix == "min" and $value > $no-media-breakpoint-value)
+			{
+				@return false;
+			}
+		} @else if not index($im-no-media-expressions, $condition) {
+			@return false;
+		}
+	}
+
+	@return true;
+}
+
+////
+
+///
+/// Obtiene el operador de una expresión
+///
+/// @param {String} $expression - Expresión de la cual extraer el operador
+///
+/// @return {String} - Cualquiera de `>=`, `>`, `<=`, `<`, `≥`, `≤`
+///
+@function get-expression-operator($expression) {
+	@each $operator in (">=", ">", "<=", "<", "≥", "≤") {
+		@if str-index($expression, $operator) {
+			@return $operator;
+		}
+	}
+
+	// No es posible incluir un mixin dentro de una función, por lo que debemos
+	// confiar en la función `im-log(..)` en lugar del mixin `log(..)`. Como
+	// las funciones no pueden llamarse en cualquier lugar en Sass, necesitamos
+	// hackear la llamada en una variable ficticia, como `$_`. Si alguien tiene
+	// un problema de alcance con Sass 3.3, cambia esta línea a `@if im-log(..) {}`.
+	$_: im-log("No se encontró un operador en `#{$expression}`.");
+}
+
+///
+/// Obtiene la dimensión de una expresión, basada en un operador encontrado
+///
+/// @param {String} $expression - Expresión de la cual extraer la dimensión
+/// @param {String} $operator - Operador de `$expression`
+///
+/// @return {String} - `width` o `height` (o potencialmente cualquier otra cosa)
+///
+@function get-expression-dimension($expression, $operator) {
+	$operator-index: str-index($expression, $operator);
+	$parsed-dimension: str-slice($expression, 0, $operator-index - 1);
+	$dimension: "width";
+
+	@if str-length($parsed-dimension) > 0 {
+		$dimension: $parsed-dimension;
+	}
+
+	@return $dimension;
+}
+
+///
+/// Obtiene el prefijo de dimensión basado en un operador
+///
+/// @param {String} $operator - Operador
+///
+/// @return {String} - `min` o `max`
+///
+@function get-expression-prefix($operator) {
+	@return if(index(("<", "<=", "≤"), $operator), "max", "min");
+}
+
+///
+/// Obtiene el valor de una expresión, basado en un operador encontrado
+///
+/// @param {String} $expression - Expresión de la cual extraer el valor
+/// @param {String} $operator - Operador de `$expression`
+///
+/// @return {Number} - Un valor numérico
+///
+@function get-expression-value($expression, $operator) {
+	$operator-index: str-index($expression, $operator);
+	$value: str-slice($expression, $operator-index + str-length($operator));
+
+	@if map-has-key($breakpoints, $value) {
+		$value: map-get($breakpoints, $value);
+	} @else {
+		$value: to-number($value);
+	}
+
+	$interval: map-get($unit-intervals, unit($value));
+
+	@if not $interval {
+		// No es posible incluir un mixin dentro de una función, por lo que debemos
+		// confiar en la función `im-log(..)` en lugar del mixin `log(..)`. Como
+		// las funciones no pueden llamarse en cualquier lugar en Sass, necesitamos
+		// hackear la llamada en una variable ficticia, como `$_`. Si alguien tiene
+		// un problema de alcance con Sass 3.3, cambia esta línea a `@if im-log(..) {}`.
+		$_: im-log("Unidad desconocida `#{unit($value)}`.");
+	}
+
+	@if $operator == ">" {
+		$value: $value + $interval;
+	} @else if $operator == "<" {
+		$value: $value - $interval;
+	}
+
+	@return $value;
+}
+
+///
+/// Analiza una expresión para devolver una expresión de media query válida
+///
+/// @param {String} $expression - Expresión a analizar
+///
+/// @return {String} - Media query válida
+///
+@function parse-expression($expression) {
+	// Si es parte de $media-expressions, no tiene operador
+	// entonces no es necesario seguir, solo devuelve el valor
+	@if map-has-key($media-expressions, $expression) {
+		@return map-get($media-expressions, $expression);
+	}
+
+	$operator: get-expression-operator($expression);
+	$dimension: get-expression-dimension($expression, $operator);
+	$prefix: get-expression-prefix($operator);
+	$value: get-expression-value($expression, $operator);
+
+	@return "(#{$prefix}-#{$dimension}: #{$value})";
+}
+
+///
+/// Corta `$list` entre los índices `$start` y `$end`
+///
+/// @access private
+///
+/// @param {List} $list - Lista a cortar
+/// @param {Number} $start [1] - Índice de inicio
+/// @param {Number} $end [length($list)] - Índice final
+///
+/// @return {List} Lista cortada
+///
+@function slice($list, $start: 1, $end: length($list)) {
+	@if length($list) < 1 or $start > $end {
+		@return ();
+	}
+
+	$result: ();
+
+	@for $i from $start through $end {
+		$result: append($result, nth($list, $i));
+	}
+
+	@return $result;
+}
+
+////
+
+///
+/// Convierte una cadena en un número
+///
+/// @param {String | Number} $value - Valor a analizar
+///
+/// @return {Number}
+///
+@function to-number($value) {
+	@if type-of($value) == "number" {
+		@return $value;
+	} @else if type-of($value) != "string" {
+		$_: im-log(
+			"El valor para `to-number` debe ser un número o una cadena."
+		);
+	}
+
+	$first-character: str-slice($value, 1, 1);
+	$result: 0;
+	$digits: 0;
+	$minus: ($first-character == "-");
+	$numbers: (
+		"0": 0,
+		"1": 1,
+		"2": 2,
+		"3": 3,
+		"4": 4,
+		"5": 5,
+		"6": 6,
+		"7": 7,
+		"8": 8,
+		"9": 9,
+	);
+
+	// Elimina el signo +/- si está presente en el primer carácter
+	@if ($first-character == "+" or $first-character == "-") {
+		$value: str-slice($value, 2);
+	}
+
+	@for $i from 1 through str-length($value) {
+		$character: str-slice($value, $i, $i);
+
+		@if not(index(map-keys($numbers), $character) or $character == ".") {
+			@return to-length(
+				if($minus, -$result, $result),
+				str-slice($value, $i)
+			);
+		}
+
+		@if $character == "." {
+			$digits: 1;
+		} @else if $digits == 0 {
+			$result: $result * 10 + map-get($numbers, $character);
+		} @else {
+			$digits: $digits * 10;
+			$result: $result + map-get($numbers, $character) / $digits;
+		}
+	}
+
+	@return if($minus, -$result, $result);
+}
+
+///
+/// Agrega `$unit` a `$value`
+///
+/// @param {Number} $value - Valor al cual agregar la unidad
+/// @param {String} $unit - Representación en cadena de la unidad
+///
+/// @return {Number} - `$value` expresado en `$unit`
+///
+@function to-length($value, $unit) {
+	$units: (
+		"px": 1px,
+		"cm": 1cm,
+		"mm": 1mm,
+		"%": 1%,
+		"ch": 1ch,
+		"pc": 1pc,
+		"in": 1in,
+		"em": 1em,
+		"rem": 1rem,
+		"pt": 1pt,
+		"ex": 1ex,
+		"vw": 1vw,
+		"vh": 1vh,
+		"vmin": 1vmin,
+		"vmax": 1vmax,
+	);
+
+	@if not index(map-keys($units), $unit) {
+		$_: im-log("Unidad inválida `#{$unit}`.");
+	}
+
+	@return $value * map-get($units, $unit);
+}
+
+///
+/// Este mixin tiene como objetivo redefinir la configuración solo para el alcance de
+/// la llamada. Es útil cuando un componente necesita una configuración extendida,
+/// como breakpoints personalizados (llamados tweakpoints), por ejemplo.
+///
+
+///
+/// @param {Map} $tweakpoints [()] - Mapa de tweakpoints para fusionar con `$breakpoints`
+/// @param {Map} $tweak-media-expressions [()] - Mapa de expresiones de medios ajustadas para fusionar con `$media-expression`
+///
+/// @example scss - Extiende los breakpoints globales con un tweakpoint
+///  @include media-context(('custom': 678px)) {
+///    .foo {
+///      @include media('>phone', '<=custom') {
+///       // ...
+///      }
+///    }
+///  }
+///
+/// @example scss - Extiende las expresiones de medios globales con una personalizada
+///  @include media-context($tweak-media-expressions: ('all': 'all')) {
+///    .foo {
+///      @include media('all', '>phone') {
+///       // ...
+///      }
+///    }
+///  }
+///
+/// @example scss - Extiende ambos mapas de configuración
+///  @include media-context(('custom': 678px), ('all': 'all')) {
+///    .foo {
+///      @include media('all', '>phone', '<=custom') {
+///       // ...
+///      }
+///    }
+///  }
+///
+@mixin media-context($tweakpoints: (), $tweak-media-expressions: ()) {
+	// Guarda la configuración global
+	$global-breakpoints: $breakpoints;
+	$global-media-expressions: $media-expressions;
+
+	// Actualiza la configuración global
+	$breakpoints: map-merge($breakpoints, $tweakpoints) !global;
+	$media-expressions: map-merge(
+		$media-expressions,
+		$tweak-media-expressions
+	) !global;
+
+	@content;
+
+	// Restaura la configuración global
+	$breakpoints: $global-breakpoints !global;
+	$media-expressions: $global-media-expressions !global;
+}
+
+////
+
+///
+/// Genera una media query basada en una lista de condiciones
+///
+/// @param {Arglist}   $conditions  - Condiciones de la media query
+///
+/// @example scss - Con un breakpoint definido
+///  @include media('>phone') { }
+///
+/// @example scss - Con dos breakpoints definidos
+///  @include media('>phone', '<=tablet') { }
+///
+/// @example scss - Con valores personalizados
+///  @include media('>=358px', '<850px') { }
+///
+/// @example scss - Con breakpoints definidos y valores personalizados
+///  @include media('>desktop', '<=1350px') { }
+///
+/// @example scss - Con una expresión estática
+///  @include media('retina2x') { }
+///
+/// @example scss - Mezclando todo
+///  @include media('>=350px', '<tablet', 'retina3x') { }
+///
+@mixin media($conditions...) {
+	@if ($im-media-support and length($conditions) == 0) or
+		(
+			not
+				$im-media-support and
+				im-intercepts-static-breakpoint($conditions...)
+		)
+	{
+		@content;
+	} @else if ($im-media-support and length($conditions) > 0) {
+		@media #{unquote(parse-expression(nth($conditions, 1)))} {
+			// Llamada recursiva
+			@include media(slice($conditions, 2)...) {
+				@content;
+			}
+		}
+	}
+}
